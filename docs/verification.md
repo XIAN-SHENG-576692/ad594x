@@ -11,8 +11,9 @@ directories. This stage has no C build, runtime test, cppcheck result, or proof.
 
 1. Generation: deterministic output; valid default, custom, and empty prefixes;
    uppercase/lowercase mapping; invalid-name and collision rejection; all
-   supported type suffixes; consistent filenames/includes/contracts; every
-   project-authored C/header/ACSL artifact traceable to a Jinja template.
+   supported type suffixes; include guards and repeated inclusion; consistent
+   filenames/includes/contracts; every project-authored C/header/ACSL artifact
+   traceable to a Jinja template.
 2. Build: compile generated library, examples, and tests with strict warnings;
    verify each supported compiler/target configuration and all prefix cases.
 3. Runtime: Unity assertions plus FFF transport fakes verify transactions,

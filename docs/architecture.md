@@ -60,7 +60,9 @@ output parameters. Every input parameter starts `in_`; every output parameter
 starts `out_`. Input pointees are const where applicable. Define pointer
 validity, aliasing, lifetime, output-on-error, and overflow rules per operation;
 default to disjoint input/output storage and unchanged outputs on failure.
-All generated headers use `#pragma once`.
+All generated headers use include guards named `upper_prefix` + uppercase
+unprefixed header stem + `_H` (e.g. `AD594X_DEVICE_H`; `DEVICE_H` for an empty
+prefix), subject to macro-name validation.
 
 Pure functions validate, transform state, encode transactions, and interpret
 responses. Actual SPI, GPIO, timing, and callbacks necessarily have effects:
