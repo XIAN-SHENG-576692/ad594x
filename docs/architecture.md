@@ -1,38 +1,40 @@
 # Architecture contract
 
-Status: design requirements; no implementation exists in this stage.
+Design requirements for the [implementation stages](roadmap.md#next-stages).
 
-## Generation boundary
+## Generation
 
-Implement a new Python generator using Jinja2; do not import, wrap, or derive
-implementation from the official driver. Independently establish register and
-protocol facts from device documentation in a later stage, recording sources
-and supported device variants here before implementing register access.
+Build a Python/Jinja2 generator independently of the official driver: no
+importing, wrapping, or deriving its implementation. Before register access,
+record authoritative device register/protocol sources and supported variants
+here.
 
-All project-authored `.c`, `.h`, and `.acsl` artifacts, including examples and
-tests, must come from Jinja2 templates. Third-party Unity/FFF dependencies stay
-external; do not copy their sources into project template directories.
-Write results exclusively beneath ignored `generated/`.
+Render every project-authored `.c`, `.h`, and `.acsl` (including examples/tests)
+from Jinja2 templates, exclusively into ignored `generated/`. Keep third-party
+Unity/FFF external, outside template directories.
 
-Use an explicit immutable render configuration, a deterministic file manifest,
-Jinja `StrictUndefined`, and sorted iteration. Validate configuration before
-writing; reject output path traversal and name collisions. Identical inputs
-must produce byte-identical results without timestamps or host paths.
+Use explicit immutable render configuration, a deterministic file manifest,
+`StrictUndefined`, and sorted iteration. Validate before writing; reject path
+traversal and name collisions. Identical inputs produce byte-identical output
+without timestamps or host paths.
 
 ## Naming and specialization
 
-Default prefix: `ad594x`; accept an explicitly empty prefix. For nonempty
-prefixes, accept a portable lower_snake_case identifier beginning with a letter;
-reject reserved identifiers and invalid characters rather than silently mapping
-distinct inputs to one name. Validate resulting names against C keywords and
-collisions, including the empty-prefix case.
+Default prefix: `ad594x`; explicitly empty is valid. Nonempty prefixes must be
+portable lower_snake_case identifiers starting with a letter. Reject reserved
+identifiers/invalid characters; never silently normalize distinct inputs into
+one name. Validate final names against C keywords and collisions, including
+with an empty prefix.
 
 Compute `lower_prefix = prefix + "_"` and
 `upper_prefix = prefix.upper() + "_"` only when prefix is nonempty; otherwise
-both are empty. Apply these centrally to all externally visible C names:
+both are empty. Apply centrally to all externally visible C names:
 functions, typedefs, struct/enum tags, enum constants, macros, callbacks, and
-generated filenames. Use lower_snake_case except uppercase macros/constants.
-Include directives and external ACSL references must use the same mapping.
+generated filenames. Use lower_snake_case except uppercase macros/constants;
+use the same mapping in includes and external ACSL references.
+
+Header guards: `upper_prefix` + uppercase unprefixed header stem + `_H`,
+validated as macro names; e.g. `AD594X_DEVICE_H`, empty-prefix `DEVICE_H`.
 
 Generate specializations with Jinja loops/macros, never C11 `_Generic`:
 
@@ -44,48 +46,43 @@ Generate specializations with Jinja loops/macros, never C11 `_Generic`:
 | u64 / i64 | uint64_t / int64_t |
 | f32 / f64 | float / double |
 
-Require the target's documented widths and floating representation before
-enabling corresponding specializations. A function ends in its data type or
-custom struct name; e.g. `ad594x_scale_u16`, `scale_u16` with an empty prefix,
-or `ad594x_plan_device_context` for a context-producing operation. Apply this
-rule to callbacks and hardware-facing functions as well. Avoid unsupported
-specializations rather than inventing meaningless operations for every type.
+Enable specializations only with documented target widths/float representation
+and meaningful operations. Every function, including callbacks and hardware
+functions, ends in its data type or custom struct name: `ad594x_scale_u16`,
+`scale_u16` (empty prefix), `ad594x_plan_device_context` (context output).
 
-## Functional C core and hardware boundary
+## Core and transport
 
-Use explicit immutable input contexts and separate output contexts. No mutable
-globals, hidden caches, implicit ownership, or core heap allocation. Functions
-return only an error `enum`/`int` or `void`; all computed values leave through
-output parameters. Every input parameter starts `in_`; every output parameter
-starts `out_`. Input pointees are const where applicable. Define pointer
-validity, aliasing, lifetime, output-on-error, and overflow rules per operation;
-default to disjoint input/output storage and unchanged outputs on failure.
-All generated headers use include guards named `upper_prefix` + uppercase
-unprefixed header stem + `_H` (e.g. `AD594X_DEVICE_H`; `DEVICE_H` for an empty
-prefix), subject to macro-name validation.
+Use explicit immutable input contexts and separate output contexts; no mutable
+globals, hidden caches, implicit ownership, or core heap allocation. Return only
+error `enum`/`int` or `void`; computed values use output parameters. Prefix every
+input parameter `in_`, every output `out_`; make input pointees const where
+applicable. Specify pointer validity, aliasing, lifetime, output-on-error, and
+overflow per operation. Default: disjoint input/output storage, outputs
+unchanged on failure.
 
 Pure functions validate, transform state, encode transactions, and interpret
-responses. Actual SPI, GPIO, timing, and callbacks necessarily have effects:
-isolate them in an explicit caller-supplied transport boundary. The pure core
-returns transaction plans and a new state; the transport executes the plans
-and passes observations into the next pure transition. Do not claim hardware
-access itself is side-effect-free. Transport handles and failures are explicit.
+responses, producing transaction plans and new state through output parameters.
+Explicit caller-supplied transport executes plans and feeds observations into
+the next transition.
+Isolate SPI/GPIO/timing/callback effects there; hardware access is effectful.
+Make transport handles and failures explicit.
 
-Prefer generated specialization, bounded buffers, fixed-width arithmetic,
-and precomputed constants. Performance takes precedence over readability;
-record measured tradeoffs and retain defined C behavior. Specify wire byte
-order explicitly; never depend on packed struct layout or host endianness.
+Prefer generated specialization, bounded buffers, fixed-width arithmetic, and
+precomputed constants. Prioritize performance over readability; record measured
+tradeoffs and retain defined C behavior. Specify wire byte order; never rely
+on packed struct layout or host endianness.
 
-## Contract ownership
+## Contracts
 
-Keep ACSL exclusively in generated `.acsl` files rendered from `templates/spec/`.
-Bind each contract to its generated C function using the same naming context.
-Specify validity/separation, ranges, frame conditions, termination where
-applicable, success semantics, and error behavior. Pure logic permits writes
-only to declared outputs. Model transport effects separately.
+Authoritative ACSL lives in separate `.acsl` files rendered from
+`templates/spec/`. Bind contracts to generated functions using the same naming
+context. Specify validity/separation, ranges, frame conditions, applicable
+termination, success, and errors. Pure logic writes only declared outputs;
+model transport effects separately.
 
-Before implementation, demonstrate the selected Frama-C mechanism for attaching
-external contracts to exact translation units. Do not assume a standalone ACSL
-file is automatically applied by passing it to Frama-C. If attachment requires
-an intermediate annotated translation unit, generate it with Jinja2 under
-`generated/` and keep the authoritative contracts in separate `.acsl` files.
+Before implementation, demonstrate external-contract attachment to exact
+Frama-C translation units; passing a standalone `.acsl` file alone does not
+establish attachment. If needed, render an annotated intermediate translation
+unit with Jinja2 under `generated/`, keeping separate `.acsl` authoritative.
+Validate attachment with the [formal gate](verification.md#acceptance-gates).

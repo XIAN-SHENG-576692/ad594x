@@ -1,25 +1,22 @@
-# Scope and handoff
+# Scope and stages
 
-## Stage 0: this commit
+## Current boundary
 
-- Create documentation, ignore rules, host bootstrap, and scaffold CI.
-- Leave `templates/` and its five subdirectories free of files.
-- Provide architecture and verification contracts for later sessions.
-- Commit the reviewed scaffold and stop; do not start generator implementation.
+Stage 0 covers documentation, ignore rules, bootstrap, and scaffold CI.
+Keep [template directories](development.md#layout) empty until a task requests
+implementation. The stages below are plans, not standing instructions to execute.
 
-## Later stages (not authorized by this scaffold task)
+## Next stages
 
-1. Record device variants and authoritative register/protocol sources. Define
-   immutable render configuration, API/status types, prefix validation, and
-   a deterministic generation manifest.
-2. Implement the Jinja2 generator and templates, starting with pure encoders
-   and state transitions. Validate default/custom/empty naming and every
-   applicable primitive/custom type specialization.
-3. Add transport adapters, generated examples and Unity/FFF tests, CMake/CTest,
-   toolchain bootstrap scripts, and build/test CI jobs.
-4. Attach separate ACSL contracts to generated functions, add cppcheck and
-   Frama-C jobs, enforce verification acceptance gates, and measure performance.
+1. Record supported device variants and authoritative register/protocol
+   sources. Define render configuration, API/status types, prefix validation,
+   and generation manifest per [architecture](architecture.md).
+2. Implement generator/templates, starting with pure encoders and state
+   transitions; validate naming and applicable type specializations.
+3. Add transport adapters, examples, Unity/FFF tests, CMake/CTest, toolchain
+   bootstraps, and build/test CI.
+4. Attach external ACSL contracts; add cppcheck/Frama-C jobs, enforce
+   [acceptance gates](verification.md#acceptance-gates), and measure performance.
 
-Each later stage must update `docs/` with decisions, executable commands,
-validation evidence, and remaining limits. Do not expand `AGENTS.md` with logs
-or implementation guidance.
+Each stage records decisions, executable commands, validation evidence, and
+remaining limits in the owning docs per [maintenance](index.md#maintenance).

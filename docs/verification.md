@@ -2,12 +2,12 @@
 
 ## Current CI
 
-GitHub Actions runs the Ubuntu bootstrap and scaffold checks on pushes, pull
-requests, and manual dispatch. Checks enforce required documentation, ignored
-generated output, bootstrap syntax, Jinja2 availability, and empty template
-directories. This stage has no C build, runtime test, cppcheck result, or proof.
+[Workflow](../.github/workflows/ci.yml): pushes, pull requests, manual dispatch.
+Runs [bootstrap/check commands](development.md#bootstrap-and-current-checks).
+[Scaffold check](../scripts/check-scaffold.sh) enforces required docs, ignored
+output, bootstrap syntax, Jinja2 availability, and empty template directories.
 
-## Implementation acceptance gates
+## Acceptance gates
 
 1. Generation: deterministic output; valid default, custom, and empty prefixes;
    uppercase/lowercase mapping; invalid-name and collision rejection; all
@@ -29,7 +29,7 @@ directories. This stage has no C build, runtime test, cppcheck result, or proof.
    explicit trusted transport assumptions. Process exit success alone does not
    establish proof success. Inspect integer/float coverage before making claims.
 
-As each gate becomes executable, add a dedicated GitHub Actions job using the
-matching `init-<PURPOSE>-<HOST>.sh` bootstrap. Upload diagnostics and rendered
-artifacts on failure; never silently skip missing tools or absent generated
-inputs. Runtime tests, cppcheck, and proofs remain distinct evidence.
+As gates become executable, add dedicated CI jobs and matching
+`init-<PURPOSE>-<HOST>.sh` bootstraps. Upload diagnostics/rendered artifacts on
+failure; never silently skip missing tools or generated inputs. Runtime tests,
+cppcheck, and proofs remain distinct evidence.
