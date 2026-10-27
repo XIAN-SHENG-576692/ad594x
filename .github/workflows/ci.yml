@@ -1,4 +1,4 @@
-name: Scaffold validation
+name: Register generation validation
 
 on:
   push:
@@ -9,12 +9,16 @@ permissions:
   contents: read
 
 jobs:
-  scaffold:
+  registers:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Bootstrap development environment
         run: bash scripts/init-dev-ubuntu.sh
-      - name: Validate scaffold
+      - name: Validate repository structure
         run: bash scripts/check-scaffold.sh
+      - name: Generate register headers and release packages
+        run: .venv/bin/python scripts/generate_registers.py --releases
+      - name: Verify metadata, naming, determinism, compilation and releases
+        run: .venv/bin/python scripts/verify_registers.py

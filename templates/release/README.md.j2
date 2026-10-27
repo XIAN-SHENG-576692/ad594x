@@ -1,0 +1,49 @@
+# AD594x register headers{% if prefix_only %}: prefix template package{% endif %}
+
+This package contains register metadata only. It performs no register access,
+transport, initialization, sequencing, conversion, or runtime error handling.
+Block headers are independent and include `<stdint.h>`; the umbrella includes
+all blocks. Addresses, masks, resets, and enumeration values use `UINT32_C`.
+Field reset and enumeration values are unshifted; positions and widths use `U`.
+Register names omit functional block names. Reserved fields have comments but no
+macros. Read-only bits are excluded from writable masks without becoming reserved.
+Unresolved constants are omitted; comments retain conflicting candidates and
+explain source gaps. The included inventory records unresolved values as `null`.
+Consult [PROVENANCE.md](PROVENANCE.md), the header comments, and the included
+`data/registers.json` before using source-limited definitions.
+
+{% if prefix_only %}
+The templates already contain every register, field, enumeration, and comment.
+Only `lower_prefix` and `upper_prefix` substitutions remain; no inventory loops
+or device references are needed. Python 3 and Jinja2 are required to render:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python scripts/render.py --prefix sensor --output rendered
+cmake -S rendered -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+The default prefix is `ad594x`; `--prefix ''` is valid. The renderer validates
+prefix syntax, keywords, final macro/guard collisions, and relative paths before
+writing. It refuses an existing nonempty output directory unless `--replace`
+is supplied. `manifest.json` records rendered file checksums.
+{% else %}
+The `ad594x` prefix is fully rendered; Python/Jinja2 is unnecessary to consume it.
+
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+cmake --install build --prefix install
+```
+
+Alternatively, add `include/` to your C11 compiler include path and include
+`ad594x_registers.h` or a particular `ad594x_registers_<block>.h` header.
+The example contains compile-time ADIID address/reset regression checks.
+{% endif %}
+
+`manifest.json` records file checksums and template provenance. No temporary
+reference files or network access are required to build or render this package.

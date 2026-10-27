@@ -4,41 +4,91 @@
 
 | Path | Purpose |
 | --- | --- |
-| `templates/{examples,include,spec,src,tests}/` | Example, header, ACSL, implementation, Unity/FFF templates |
-| `generated/` | Ignored render output |
-| `scripts/` | Bootstrap and validation |
-| `.github/workflows/` | Automated checks |
+| `data/registers.json` | Canonical inventory, source provenance, conflicts and coverage |
+| `templates/include/` | Independent block and umbrella Jinja2 headers |
+| `templates/examples/` | Compile-only Jinja2 usage example |
+| `templates/release/` | Release documentation and CMake integration |
+| `generated/` | Ignored headers, examples, builds, manifests and releases |
+| `scripts/` | Bootstrap, import, generation, prefix rendering and verification |
 
-At scaffold stage, `templates/` contains only those five empty directories: no
-`.gitkeep`, README, or templates. Git cannot track empty directories; bootstrap
-recreates them.
+Every project-authored `.c`, `.h` and future `.acsl` file is rendered from Jinja2
+only into `generated/`. Future `templates/{spec,src,tests}/` directories remain
+available; no driver implementation or third-party C framework is present.
 
-## Bootstrap and current checks
+## Setup
 
-Supported host: Ubuntu with Python 3, pip, and venv. Install prerequisites if
-missing, then bootstrap and check from the repository root:
+Ubuntu bootstrap:
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y python3 python3-venv python3-pip
+sudo apt-get install -y python3 python3-venv python3-pip build-essential cmake
 bash scripts/init-dev-ubuntu.sh
-bash scripts/check-scaffold.sh
 ```
 
-Bootstrap installs `requirements-dev.txt` (Jinja2 and dependencies) from the
-configured package index into `.venv/`, leaving system Python unchanged.
-CI uses the same bootstrap. Add `init-<PURPOSE>-<HOST>.sh` for other hosts;
-do not assume Ubuntu package names there.
+On another host with Python 3 and a C11 compiler, create a virtual environment
+directly; the Ubuntu bootstrap intentionally checks the operating system:
 
-## Planned toolchain
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+```
 
-Use C11 per [architecture](architecture.md), a host C compiler, CMake/CTest,
-Unity, FFF, cppcheck, Frama-C/WP, Why3, and a supported solver. Before
-implementation, record compatible versions/revisions, pin CI dependencies, and
-verify downloads. No third-party C code is currently vendored.
+Jinja2 3.1 is required. Evidence updates use the permitted driver files and
+indexed PDF text described in [register evidence](register-evidence.md); the
+importer does not read binary PDFs. Rendering and release consumption do not
+need reference downloads. No system Python packages are changed.
 
-Planned sequence: render → compile → runtime tests → static analysis → proofs.
-Add exact commands when interfaces exist; scaffold checks establish no C
-correctness. See [acceptance gates](verification.md#acceptance-gates).
+## Generate, verify and build
 
-Review templates with rendered validation results; never commit generated output.
+Run from the repository root:
+
+```sh
+bash scripts/check-scaffold.sh
+.venv/bin/python scripts/generate_registers.py --releases
+.venv/bin/python scripts/verify_registers.py
+cmake -S generated/registers -B generated/build
+cmake --build generated/build
+ctest --test-dir generated/build --output-on-failure
+```
+
+The retained `check-scaffold.sh` name is a compatibility entry point for repository
+structure/dependency checks. Verification covers actual generated artifacts;
+see [verification](verification.md) for evidence and limits.
+
+Choose a custom prefix or explicitly empty prefix:
+
+```sh
+.venv/bin/python scripts/generate_registers.py --prefix sensor --output generated/sensor
+.venv/bin/python scripts/generate_registers.py --prefix '' --output generated/unprefixed
+```
+
+Prefixes must be empty or portable lower snake case starting with a letter.
+Keywords, invalid spellings, reserved names and final namespace collisions fail.
+Names are never silently normalized. The generator validates before replacing
+its output tree, which must be under the repository's ignored `generated/`.
+
+## Release packages
+
+`--releases` creates two independent packages and deterministic `.tar.gz`
+archives under `generated/releases/`:
+
+- `ad594x-registers`: complete concrete headers, example and CMake integration.
+- `ad594x-registers-prefix-template`: all metadata loops expanded; only the
+  prefix remains substitutable, with a standalone `scripts/render.py`.
+
+Both include `data/registers.json`, `PROVENANCE.md`, usage documentation and a
+SHA-256 file manifest. The concrete package requires only a C11 toolchain.
+The prefix package requires Python/Jinja2 to render, then the same C11 toolchain.
+Release builds and prefix rendering work after extraction outside this checkout.
+
+```sh
+.venv/bin/python generated/releases/ad594x-registers-prefix-template/scripts/render.py --prefix sensor --output generated/release-sensor
+cmake -S generated/release-sensor -B generated/release-sensor-build
+cmake --build generated/release-sensor-build
+ctest --test-dir generated/release-sensor-build --output-on-failure
+```
+
+The header comments and inventory are the authority for source limitations and
+deliberately omitted uncertain constants. Review templates together with rendered
+verification results; never commit generated output. Transport/runtime/formal
+gates remain future work as described in [the roadmap](roadmap.md).

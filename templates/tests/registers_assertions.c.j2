@@ -1,0 +1,5 @@
+#include "{{ umbrella }}"
+{% for name, value in macros|dictsort %}
+_Static_assert({{ name }} == {{ value }}, "{{ name }}");
+{% endfor %}
+int main(void) { return 0; }

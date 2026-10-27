@@ -1,8 +1,9 @@
-# ad594x library generator
+# ad594x register generator
 
-Planned Jinja2 generator for type-specialized AD594x C libraries with separate
-ACSL contracts, independent of the official driver.
+Jinja2 generator for independent AD594x register headers, grouped by datasheet
+functional block. Generates concrete headers and a fully expanded prefix-only
+template release from one canonical, source-attributed register inventory.
 
 See [docs/index.md](docs/index.md) for scope and task routes;
-[Ubuntu setup and checks](docs/development.md#bootstrap-and-current-checks) for
-prerequisites and commands.
+[setup, generation, release and build commands](docs/development.md) for usage.
+This stage contains register definitions only; it implements no device access.

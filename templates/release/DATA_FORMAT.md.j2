@@ -1,0 +1,23 @@
+# Canonical inventory format
+
+`data/registers.json` uses schema version 1. Integer constants are JSON integers
+or hexadecimal strings; unresolved critical constants are `null`. Source IDs
+connect each `source_refs` item (`source`, `location`) to the root `sources`
+array (`id`, `title`, `url`, `accessed`, optional revision and file hashes).
+
+`blocks` contains datasheet functional blocks (`name`, `title`, `registers`).
+Each register records `name`, `address`, `reset`, `storage_width`, `access`,
+`description`, `evidence_status`, `source_refs`, `fields`, `writable_mask` and
+`reserved_mask`. `notes` and `conflicts` retain qualifications and disagreements.
+Root `conflicts` records candidate values, resolution and rationale; `coverage`
+records the scope and limitations of the review.
+
+Fields record `name`, `position`, `width`, unshifted `reset`, `access`,
+`description`, `source_refs` and `enumerations`. An enumeration records `name`,
+unshifted `value`, `description` and source locations. Reserved fields are marked
+`reserved` or named `RESERVED...` and emit no field macros. A nonempty
+`range_conflict` intentionally suppresses field position, width and mask macros.
+Null register/field constants similarly suppress only the uncertain definition.
+
+The prefix-only release embeds this inventory for audit; its renderer does not
+parse it. The expanded templates already contain the reviewed metadata.

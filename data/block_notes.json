@@ -1,0 +1,628 @@
+{
+  "configuration": [
+    {
+      "description": "After every reset, perform the Table 14 writes in order (hexadecimal address=value): 0908=02C9; 0C08=206C; 21F0=0010; 0410=02C9; 0A28=0009; 238C=0104; 0A04=4859; 0A04=F27B; 0A00=8009; 22F0=0000. These required startup writes include unnamed registers and establish neither additional fields nor reset values.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 29, Table 14"
+        }
+      ]
+    },
+    {
+      "description": "PMBW jointly controls high-speed DAC reconstruction and ADC antialias bandwidth. SYSBW=0 selects automatic configuration: the table states waveform frequency=50 kHz gives 5 kHz cutoff, 50\u2013100 kHz gives 100 kHz, and 100\u2013200 kHz gives 250 kHz. Its first entry is an equality, not an explicit less-than interval; the boundary overlaps the next entry. Codes 1/2/3 force 50/100/250 kHz at \u22123 dB. SYSHS is recommended clear below 80 kHz and set above 80 kHz; exactly 80 kHz is unspecified.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 26\u201327, Table 10"
+        }
+      ]
+    },
+    {
+      "description": "Reserved AFECON bit 19 must be written 1, despite the driver's named ALDOILIMITEN field. Both interpretations remain evidence; neither a field label nor a reset value alone establishes access.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 25, Table 9"
+        },
+        {
+          "source": "driver",
+          "location": "ad 5940.h:907"
+        }
+      ]
+    }
+  ],
+  "low_power_dac": [
+    {
+      "description": "LPDACDAT0[11:0] sets the 12-bit output, normally VBIAS0; [17:12] sets the 6-bit output, normally VZERO0. Nominal ranges are 0.2\u20132.4 V and 0.2\u20132.366 V. L12=2.2 V/(4096\u22121)\u2248537.2 \u00b5V; L6=64\u00d7L12 \u2248 34.38 mV. V6=0.2 V+code 6\u00d7L6. V12=0.2 V+code 12\u00d7L12 below V6; the equation subtracts one L12 when V12 \u2265 V6. The accompanying software decrements code 12 only when code 12>64\u00d7code 6, so its equality condition differs from the equation. Retain that discrepancy.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 30\u201331, Equations 3\u20138"
+        }
+      ]
+    },
+    {
+      "description": "LPDACDAT0 updates need 10 system-clock periods at 16 MHz or one at 32 kHz; allow these delays before sequencer sleep. Waveform-driven operation requires the 32 kHz system oscillator and compliance with low-power DAC settling time.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 30; p. 99"
+        }
+      ]
+    },
+    {
+      "description": "Automatic switching uses LPDACCON0 bit 5: normal mode closes SW2/SW3 and opens SW0/SW1/SW4; diagnostic mode closes SW0/SW4 and opens SW1/SW2/SW3. For individual switching set LPDACSW0 bit 5=1, then write [4:0]. Moving VZERO0 from low-power to high-speed TIA preserves sensor bias VBIAS0\u2212VZERO0. Diagnostic impedance additionally needs AFECON bit 21 dc buffers. Four-wire isolated measurements use SWMUX bit 3=1 for low-power common mode.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 30\u201332"
+        }
+      ]
+    }
+  ],
+  "low_power_tia": [
+    {
+      "description": "Choose RTIA from Imax=0.9 V/RTIA for the stated ADC range at PGA1 or 1.5. Large RLOAD values consume resistance from the shared RGAIN bank. LPTIASW0 uses 1=closed and 0=open. The recommended ADC input is the low-pass-filtered TIA output.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 37"
+        }
+      ]
+    },
+    {
+      "description": "For externalRTIA, connect RC0_0\u2013RC0_1, clear LPTIACON0[9:5], and close SW9; open SW9 for internalRTIA. A parallel capacitor, recommended 100 nF, maintains stability. SW0 controls feedback protection diodes intended to avoid saturation while changing gain; their leakage can exceed 1 nA above 200 mV differential or 1 \u00b5A above 500 mV. Current-limit protection still has duration/repetition limits.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 37"
+        }
+      ]
+    },
+    {
+      "description": "Table 21 joint switch recommendations, written as (LPDACCON0.bit 5, LPDACSW0[5:0], LPTIASW0[13:0]): ordinary amperometry=(0, do not care, 0x302C); with diode protection=(0, do not care, 0x302D); with short protection=(0, do not care, 0x302E); zero-bias sensor=(0, do not care, 0x306C); two-lead sensor=(0, do not care, 0x342C). Ordinary modes retain external VBIAS0/VZERO0 capacitors. Short protection closes SW1 from SE0 to TIA output for sensor charging; zero-bias closes SW6 to equalize potentiostat inverting/TIA noninverting bias at VBIAS0; two-lead closes SW10 between CE0/RE0. The printed 0xXX superscript 1 denotes the footnoted do-not-care value, not hexadecimal XX1.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 38, Table 21"
+        }
+      ]
+    },
+    {
+      "description": "Table 21 pulse/test combinations (LPDACCON0.bit 5, LPDACSW0[5:0], LPTIASW0[13:0]): low-power chronoamperometry=(1, 0x32, 0x0014); high-speed chronoamperometry on SE0=(1, 0x31, 0x0094); high-speed voltammetry=(1, 0x31, 0x0094); potentiostat/TIA unity-gain test=(0, do not care, 0x04A4). Pulse modes drive CE0 from VBIAS0 with DAC capacitors disconnected; low/high-speed TIA reads SE0, while voltammetry can use SE0 or DE0 and needs separate high-speed resistor/switch configuration. Unity mode drives CE0 and RC0_1 to check VBIAS0/VZERO0.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 38, Table 21"
+        }
+      ]
+    }
+  ],
+  "high_speed_dac": [
+    {
+      "description": "Choose reconstruction cutoff above the DAC signal frequency. Recommended SYSBW settings 1/2/3 cover frequencies through 50/100/250 kHz. Excitation gain is 2 or 0.25; attenuation is 1 or 0.2. Table 29 gives typical ranges\u00b1607, \u00b175, \u00b115.14, \u00b1121.2 mV for(HSDACCON bit 12, bit 0)=(0, 0), (1, 0), (1, 1), (0, 1).",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 43\u201344,47, Table 29"
+        }
+      ]
+    },
+    {
+      "description": "Do not combine the high-speed DAC signal chain with the low-power TIA: instability can corrupt measurements. For ac excitation over retained dc sensor bias, disconnect the potentiostat/low-power TIA, connect the high-speed excitation amplifier/TIA, select VZERO0 for the TIA positive input(HSTIACON[1:0]=1), and enable AFECON bit 21. Sensor bias remains VBIAS0\u2212VZERO0.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 45"
+        }
+      ]
+    },
+    {
+      "description": "For coherent excitation/measurement, enable the DFT Hanning window, use the stated DAC rate setting 0x1B in low-power mode or 0x7 in high-power mode, and pair 16/32 MHz clocks with 800 kSPS/1.6 MSPS ADC sampling. The prose calls both DAC rates oscillator/7, although low-power 0x1B differs from HSDACCON.Rate's direct-divisor formula; preserve this discrepancy.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 45\u201347"
+        }
+      ]
+    },
+    {
+      "description": "User DAC calibration uses a precision resistor across RCAL0/RCAL1; adjust offset until differential voltage is approximately zero. Calibrate for actual HSDACCON bits 12/0 and power mode; changing range requires the corresponding offset calibration again. Gain adjustment is optional and may instead use DAC code limits. The discussion says the DAC is not factory calibrated, while WGCON.DACGAINCAL describes factory trim; preserve both statements.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 46; p. 100, WGCON"
+        }
+      ]
+    },
+    {
+      "description": "DACGAIN applies across output-gain settings. CALDATLOCK unlock word is 0xDE87A5AF. DACOFFSET/DACOFFSETHS apply without attenuation in low/high-power mode; DACOFFSETATTEN/DACOFFSETATTENHS apply with attenuation. Offset words are signed 12-bit two's-complement half-LSB steps:\u22121024 to+1023.5 DAC LSBs.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 47\u201349, Tables 28\u201335"
+        }
+      ]
+    },
+    {
+      "description": "Attenuated-offset prose quotes typical steps 4.9 \u00b5V at(bit 12, bit 0)=(1, 1) and 24.7 \u00b5V at(1, 0); nonattenuated-offset prose quotes 197.7 \u00b5V at(0, 0) and 39.5 \u00b5V at(0, 1). Those bit 0 settings cross Table 29's attenuation-specific register assignments. Keep the quoted alternatives without inventing corrected settings.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 48\u201349"
+        }
+      ]
+    }
+  ],
+  "high_speed_tia": [
+    {
+      "description": "Enable through AFECON bit 11. Common mode selects internal 1.11 V or VZERO0. Internal feedback spans 200 \u03a9\u2013160 k\u03a9 for ordinary inputs or 50 \u03a9\u2013160 k\u03a9 onDE0; DE0 also offers load 0/10/30/50/100 \u03a9. ExternalRTIA connects DE0 to an AIN0\u2013AIN3 pin; route DE0 to output and that AIN pin to the inverting input. DE0RESCON=0x97 and HSRTIACON[3:0]=0xF bypass internal DE0 resistances. Table 36's resistance pairs are joint settings, not independent ideal load/gain values.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    },
+    {
+      "description": "DE0RESCON[7:0] paired resistance settings, RLOAD=0 \u03a9: 0x00\u219250 \u03a9; 0x18\u2192100 \u03a9; 0x38\u2192200 \u03a9; 0x58\u21921.1 k\u03a9; 0x60\u21925.1 k\u03a9; 0x68\u219210.1 k\u03a9; 0x70\u219220.1 k\u03a9; 0x78\u219240.1 k\u03a9; 0x80\u219280.1 k\u03a9; 0x88\u2192160.1 k\u03a9. Arrows give the resulting RTIA; 0xFF disconnects both resistors.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    },
+    {
+      "description": "DE0RESCON[7:0] paired resistance settings, RLOAD=10 \u03a9: 0x9\u219250 \u03a9; 0x21\u2192100 \u03a9; 0x39\u2192190 \u03a9; 0x59\u21921.09 k\u03a9; 0x61\u21925.09 k\u03a9; 0x69\u219210.09 k\u03a9; 0x71\u219220.09 k\u03a9; 0x79\u219240.09 k\u03a9; 0x81\u219280.09 k\u03a9; 0x89\u2192160.09 k\u03a9. Arrows give the resulting RTIA; 0xFF disconnects both resistors.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    },
+    {
+      "description": "DE0RESCON[7:0] paired resistance settings, RLOAD=30 \u03a9: 0x12\u219250 \u03a9; 0x2A\u2192100 \u03a9; 0x4A\u2192210 \u03a9; 0x5A\u21921.07 k\u03a9; 0x62\u21925.07 k\u03a9; 0x6A\u219210.07 k\u03a9; 0x72\u219220.07 k\u03a9; 0x7A\u219240.07 k\u03a9; 0x82\u219280.07 k\u03a9; 0x8A\u2192160.07 k\u03a9. Arrows give the resulting RTIA; 0xFF disconnects both resistors.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    },
+    {
+      "description": "DE0RESCON[7:0] paired resistance settings, RLOAD=50 \u03a9: 0x1B\u219250 \u03a9; 0x33\u2192100 \u03a9; 0x4B\u2192190 \u03a9; 0x5B\u21921.05 k\u03a9; 0x63\u21925.05 k\u03a9; 0x6B\u219210.05 k\u03a9; 0x73\u219220.05 k\u03a9; 0x7B\u219240.05 k\u03a9; 0x83\u219280.05 k\u03a9; 0x8B\u2192160.05 k\u03a9. Arrows give the resulting RTIA; 0xFF disconnects both resistors.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    },
+    {
+      "description": "DE0RESCON[7:0] paired resistance settings, RLOAD=100 \u03a9: 0x34\u219250 \u03a9; 0x3C\u2192100 \u03a9; 0x54\u2192200 \u03a9; 0x5C\u21921 k\u03a9; 0x64\u21925 k\u03a9; 0x6C\u219210 k\u03a9; 0x74\u219220 k\u03a9; 0x7C\u219240 k\u03a9; 0x84\u219280 k\u03a9; 0x8C\u2192160 k\u03a9. Arrows give the resulting RTIA; 0xFF disconnects both resistors.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 50\u201352, Table 36"
+        }
+      ]
+    }
+  ],
+  "adc": [
+    {
+      "description": "Normal ADC operation uses 16 MHz/800 kSPS; high-power uses 32 MHz/up to 1.6 MSPS for signals above 80 kHz. Sinc 3 OSR4 is recommended. Choose PMBW antialias bandwidth for the signal. For PGA1/2/4/9, Vin=(1.82 V/PGA)\u00d7(ADCDAT\u22120x8000)/32768; substitute 1.835 V at PGA1.5. Add VBIAS_CAP(typically 1.11 V) when ADCCON[12:8]=8. Only PGA1.5 is stated factory calibrated.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 55\u201356, Equations 12\u201313"
+        }
+      ]
+    },
+    {
+      "description": "Recommended mux pairs: voltage CE0/RE0/SE0/DE0/AINx versus VBIAS_CAP; low-power dc current filteredTIA versus LPTIA_N; higher-bandwidth current LPTIA_P versus LPTIA_N; high-speed current/impedance HSTIA positive output versus negative input. AIN6 is AD5940-only.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 56; pp. 62\u201363"
+        }
+      ]
+    },
+    {
+      "description": "The driver's HSDAC1.8 V reference mux option is available only when AFECON bits 20 and 6 are both set.",
+      "source_refs": [
+        {
+          "source": "driver",
+          "location": "ad 5940.h: ADCMUXP_VREF1P8DAC"
+        }
+      ]
+    },
+    {
+      "description": "Temperature measurement is factory calibrated at PGA1.5. Select ADCCON negative/positive temperature inputs 0xB/0xB; enable AFECON bit 12 and start with bits 13/8. Temperature\u00b0C=TEMPSENSDAT/(PGA\u00d78.13)\u2212273.15. Use 6.25 kHz chopping and average an even conversion count for improved accuracy; temperature calibration is selected automatically. Revision history identifies temperature guidance changed in May 2025 RevF; these are current RevG instructions.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 57; p. 3 revision history"
+        }
+      ]
+    },
+    {
+      "description": "For 32 MHz ADC clock, p 57 says ADCFILTERCON bit 0=0 for 1.6 MHz sampling, consistent with the field settings and driver. The p 129 high-power procedure instead says bit 0=1 enables 1.6 MHz. Keep this contradictory procedure without inferring another encoding.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 57,59,129"
+        }
+      ]
+    },
+    {
+      "description": "Enable mains rejection by clearing ADCFILTERCON bit 4 and setting AFECON bit 16. The notch takes sinc 2 output; do not bypass sinc 3. It preserves data rate and requires input frequency divisible by both 50 Hz and 60 Hz. Table 41 specifies coupled OSR, clock, mode, output-rate and settling-time combinations.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 57, Table 41"
+        }
+      ]
+    },
+    {
+      "description": "Table 41 simultaneous mains-rejection combinations (ADCFILTERCON[13:8], PMBW.SYSHS, ADC clock, sinc3 OSR, sinc2 OSR \u2192 final rate; settling): 000011, 0, 16 MHz, 5, 178\u2192900 SPS; 37 ms. 100111, 0, 16 MHz, 2, 667\u2192600 SPS; 37 ms. 101011, 0, 16 MHz, 2, 1333\u2192300 SPS; 37 ms. 101011, 1, 32 MHz, 2, 1333\u2192600 SPS; 37 ms. These coupled values are source recommendations, not independent enum settings.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 57, Table 41"
+        }
+      ]
+    }
+  ],
+  "adc_calibration": [
+    {
+      "description": "ADC correction automatically selects the active channel/PGA calibration pair. Unlock with CALDATLOCK=0xDE87A5AF and protect data afterward. Offset fields are signed 15-bit two's-complement values in 0.25 ADCDAT-LSB steps: \u22124096 to +4095.75. Gain tables identify 0x4000 as unity and 0x7FFF as approximately 2, numerically consistent with code/16384. Auxiliary/temperature descriptions nevertheless call bit 14 a sign bit and [13:0] fractional: retain that incompatible signed interpretation. Gain zero is illegal; ADCGAINGN1 says it produces 0x8000, while the other gain tables say zero. No common zero-code result is inferred.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 65\u201370, Tables 56\u201371"
+        }
+      ]
+    },
+    {
+      "description": "CALDATLOCK reset is 0xDE87A5A0 in the DAC section and 0 in the ADC section. These are conflicting statements in one publication, not independent votes. Hardware reset restores calibration defaults; retain/reload user calibration as needed. Factory PGA1.5/temperature calibration does not establish calibration for other gains.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 16,48,56\u201357,65"
+        }
+      ]
+    },
+    {
+      "description": "Offset-resolution descriptions for ADCOFFSETGN1/GN2/TEMPSENS state \u00b1VREF/2^18 but use numerical examples with a 2^17 denominator: GN1 gives 1.82/2^17=13.885 \u00b5V; GN2 gives 1.8/2^17=13.73 \u00b5V after stating VREF=1.82 V; temperature gives 1.82/2^17=13.73 \u00b5V. Those denominators, reference voltages and rounded results conflict. The indexed PDF extraction flattens the powers as 218/217; preserve source typography provenance and numeric alternatives without silently selecting a scale.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 66, 68, 70, Tables 60,64,70"
+        }
+      ]
+    }
+  ],
+  "adc_postprocessing": [
+    {
+      "description": "Minimum, maximum, and consecutive-result delta checks use ADCDAT and interrupt flags 4/5/6. Minimum hysteresis releases above ADCMIN+ADCMINSM; maximum releases below ADCMAX\u2212ADCMAXSMEN. ADCMAX's description says less-than, but its hysteresis description says greater-than. Preserve that contradictory comparison instead of changing the threshold.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 71\u201372, Tables 73\u201377"
+        }
+      ]
+    }
+  ],
+  "adc_statistics": [
+    {
+      "description": "STATSCON enables statistics and selects 128/64/32/16/8 samples for codes 0/1/2/3/4. STATSMEAN and STATSVAR report the selected window's mean/variance; each can be selected as a FIFO source.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 72\u201373,91"
+        }
+      ]
+    }
+  ],
+  "switch_matrix": [
+    {
+      "description": "Switches start open to disconnect the sensor; coordinate matrix settings with low-power-amplifier switches. D routes excitation output, P/N its feedback nodes, and T the high-speed TIA input; RCAL0/1 switches provide calibration paths. In hibernate, closing PL/PL2/NL/NL2 to the internal 1.82 V LDO is recommended to reduce leakage when retaining only low-power dc sensor bias.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 74"
+        }
+      ]
+    },
+    {
+      "description": "SWCON controls switch groups. For individual control, write xSWFULLCON first, then set SWCON.SWSOURCESEL; without that following step, the individual changes do not take effect.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 74"
+        }
+      ]
+    }
+  ],
+  "voltage_references": [
+    {
+      "description": "High-power 1.11 V/1.82 V buffers serve active ADC conversion; low-power buffers preserve decoupling charge during hibernate for faster wakeup. Reference 1.82 V, 2.5 V, 1.11 V requires decoupling at VREF_1 V82, VREF_2 V5, VBIAS_CAP respectively; buffer enables do not remove that requirement.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 87"
+        }
+      ]
+    }
+  ],
+  "sequencer_fifo": [
+    {
+      "description": "One of four sequences runs at a time; commands proceed without branching or register reads. SEQWRTMR delays only after writes. SEQHALT also pauses FIFO, timers, and waveform generation while permitting host reads. Writing SEQCNT clears the command count and seeds SEQCRC to 1; CRC polynomial is x^8+x^2+x+1 over 32-bit instructions.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 89"
+        }
+      ]
+    },
+    {
+      "description": "Sequencer writes carry 24 data bits and a 7-bit field selecting register-address[8:2]; byte/halfword accesses and bits[31:24] are unavailable. Prose gives address 0\u20130x21FC and offsets 0\u20130x1FC; the driver rejects addresses above 0x21FF. Timers count ACLK periods(62.5 ns at 16 MHz), with stated maximum 67.1 s. Timeout continues after sequence-command termination but resets when host clears SEQEN; finished/error map to interrupt 16/17.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 89\u201390"
+        }
+      ]
+    },
+    {
+      "description": "Configure shared command/FIFO memory before loading CMDFIFOWADDR/CMDFIFOWRITE, and then set SEQxINFO starts/counts. Ensure no overlap among sequences or between command/data allocations in shared 6 kB SRAM:hardware does not warn. FIFOCON bit 11 enables data FIFO; FIFOCNTSTA[26:16] reports words stored.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 91"
+        }
+      ]
+    },
+    {
+      "description": "Stream mode discards oldest data when full; FIFO mode rejects new data and must not overflow. Empty reads return 0 and raise underflow flag 27; overflow/underflow indications last one clock. A sequence request during another sequence is ignored with an interrupt. Concurrent host/sequencer writes favor the sequencer and silently lose the host write; avoid host writes during execution except SEQCON stop/halt. Host reads do not conflict.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 91\u201392"
+        }
+      ]
+    },
+    {
+      "description": "FIFO words contain ECC[31:25] and sequence ID[24:23]. Ordinary results use channel ID[22:16] plus 16 data bits; DFT results have 18-bit two's-complement data and 5-bit channel ID 11111. Channel patterns identify mean 11110xx, variance 11101xx, sinc2 1xxxxxx, sinc3 0xxxxxx, where xxxxxx is positive ADC mux input. ECC covers the lower 25 bits. ECC decoding is outside this register-only release: the indexed extraction lost the yes-column positions in Tables 128/129, so no parity masks are inferred.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 92, Table 93; p. 106, Tables 127\u2013129"
+        }
+      ]
+    }
+  ],
+  "waveform_generator": [
+    {
+      "description": "WAVEGENEN starts/repeats the selected source until disabled or switched. Disabling holds the DAC voltage until another type or reset. Trapezoid times use DAC-update periods, stated 320 kHz; zero slopes make square waves. A cycle starts at WGDELAY1 and ends at WGSLOPE2. Low-power DAC waveform routing additionally needs LPDACCON bit 6=1, the 32 kHz system clock, and settling compliance.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 99"
+        }
+      ]
+    },
+    {
+      "description": "Prose calls WGFCW[30:0] a frequency word before defining SINEFCW[23:0]; the detailed table assigns[23:0] and reserves[31:24]. It calls WGOFFSET the phase-offset register, while detailed tables use WGPHASE for phase and WGOFFSET for dc offset. Preserve these naming/range alternatives. Program WGPHASE before waveform type/enable; for coherent DFT choose fOUT/(inputRate/N) integral, accounting for the selected source and filter OSRs.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 99,102\u2013103"
+        }
+      ]
+    },
+    {
+      "description": "PDF text extraction flattens the frequency denominator as 230 and phase scale as 220. The driver's frequency calculation uses 2^30 with current SILICON_VER=2, but 2^26 with SILICON_VER=1. Its nearby comment calls 26 current and 30 future, conflicting with that compile-time selection. Frequency scale is thus independently corroborated for the selected driver version; phase typography remains an extraction qualification without visual PDF verification.",
+      "source_refs": [
+        {
+          "source": "driver",
+          "location": "ad 5940.c:1262\u20131271; ad 5940.h:3532, SILICON_VER"
+        },
+        {
+          "source": "datasheet",
+          "location": "pp. 99, 102\u2013103"
+        }
+      ]
+    }
+  ],
+  "spi": [
+    {
+      "description": "SPI sends MSB-first bytes, samples rising SCLK, and launches falling SCLK. SCLK\u226412.5 MHz and below system clock. CS frames multiples of 8 clocks. SETADDR0x20 sends a 16-bit byte address; separate WRITEREG0x2D or READREG0x6D transfers data, with one dummy byte before reads.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 104, Table 126"
+        }
+      ]
+    },
+    {
+      "description": "The driver transfers 32 data bits for inclusive addresses 0x1000\u20130x3014, and 16 elsewhere, MSB first. This supplies inventory storage-width evidence; field widths do not change transaction width.",
+      "source_refs": [
+        {
+          "source": "driver",
+          "location": "ad 5940.c:554\u2013622"
+        }
+      ]
+    },
+    {
+      "description": "FIFO reads use DATAFIFORD or READFIFO0x5F. Fast reads send six dummy bytes, stream until two results remain, and use nonzero read offset for those final two to avoid pipeline underflow. The text recommends ordinary reads below three results and fast reads above three; exactly three is unspecified.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 104\u2013105"
+        }
+      ]
+    },
+    {
+      "description": "Driver SPI_POINTER enum raw selectors are SPI=0, AGPIO=1, AFECON=2, WUPTMR=4, ALLON=6, INTC=7, AFE=11, USER0=13, USER1=14, USER2=15. These source labels name functional blocks. No active driver usage establishes their association with any particular PNTR field; preserve them as pointer-selector evidence without emitting guessed register-field encodings.",
+      "source_refs": [
+        {
+          "source": "driver",
+          "location": "ad 5940.h:2384\u20132394, SPI_POINTER_*"
+        }
+      ]
+    }
+  ],
+  "wakeup_timer": [
+    {
+      "description": "The 20-bit 32 kHz timer cycles up to eight slotsA\u2013H, each selecting SEQ0\u20133; ENDSEQ chooses the final slot before restartingA. Timing codes=clockFrequency\u00d7time; maximum stated hibernate 32 s. Sleep intervals must permit full execution:timer expiry discards remaining commands.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 107\u2013108, Equation 16"
+        }
+      ]
+    },
+    {
+      "description": "Recommended sequence:clear PWRMOD bit 2(timer sleep), set TMRCON bit 0(wakeup), set PWRMOD bit 3(sequencer sleep), unlock SEQSLPLOCK=0xA47E5, program final slot/times/order, and enable CON bit 0. End work with the sleep-trigger register. The procedure calls it SEQTRG; the inventory/driver call it SEQTRGSLP.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 107\u2013108"
+        },
+        {
+          "source": "driver",
+          "location": "ad 5940.c:2864"
+        }
+      ]
+    }
+  ],
+  "interrupts": [
+    {
+      "description": "Two controllers have separate INTCSELx/INTCFLAGx and shared INTCPOL/INTCCLR. Route INT0 to GPIO0/3/6 or INT1 to GPIO4/7, subject to package availability, and configure polarity. Clear a source by writing its INTCCLR bit. Custom interrupts use selection[12:9] and require sequencer writes to AFEGENINTSTA; SPI writes there have no effect.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 112"
+        }
+      ]
+    }
+  ],
+  "external_interrupts": [
+    {
+      "description": "Event detection supports rising, falling, either edge, high level, and low level. Level detection stays asserted until the source deasserts. Events can wake from hibernate or trigger sequences; configure EIxCON and clear status with EICLR. AD5941 exposes only GPIO0\u20132 despite the 8-bit register port.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 112,122"
+        }
+      ]
+    }
+  ],
+  "gpio": [
+    {
+      "description": "AD5940 exposes GPIO0\u20137; AD5941 only GPIO0\u20132; both use an 8-bit register port. GPIO0/1/3/4/5/6/7 have GP0PE-controlled pulls; disable unused pulls to reduce current. GP0IEN controls input sensing; GP0OEN enables GP0OUT drive. Write 1 to GP0SET/CLR/TGL to affect selected outputs; write 0 leaves others unchanged.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 122; pp. 125\u2013126"
+        }
+      ]
+    },
+    {
+      "description": "Sequencer synchronization needs GP0CON sync function and GP0OEN output enabled before SYNCEXTDEVICE writes. Trigger inputs instead need input direction and EIxCON event selection. Multiplex and direction settings are separate prerequisites.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 92,122"
+        }
+      ]
+    }
+  ],
+  "resets": [
+    {
+      "description": "External RESET low and POR restore circuits/registers to defaults. Software reset targets digital circuitry while low-power sensor-bias circuits may be retained; switch retention is separately configurable. RSTSTA identifies causes; flags clear on writing 1.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 127\u2013128"
+        }
+      ]
+    },
+    {
+      "description": "Unlock SWRSTCON with RSTCONKEY=0x12EA immediately before it; an intervening other-register write relocks. Prose says clear bit 0; the detailed table assigns bit 0 yet lists 0xA158 as trigger and 0 as not-reset; the driver declares a 16-bit field. Preserve all alternatives without publishing a guessed reset command.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 127, Tables 162\u2013163"
+        },
+        {
+          "source": "driver",
+          "location": "ad 5940.h:BITM_AFECON_SWRSTCON_SWRSTL"
+        }
+      ]
+    }
+  ],
+  "power_modes": [
+    {
+      "description": "High-power entry order is PMBW=0xD, systemDivider 2/ADCDivider 1, then 32 MHz oscillator, then ADC rate. The last step says bit 0=1 for 1.6 MHz, contrary to p 57 and the field encoding. Normal active mode defaults 16 MHz; system clock must stay\u226416 MHz through transitions.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 57,129"
+        }
+      ]
+    },
+    {
+      "description": "Hibernate(PWRMOD[1:0]=2)stops high-speed clocks while 32 kHz timing and watchdog remain active. Clear ADCRETEN to reduce leakage. Low-power DAC/reference/amplifiers may retain sensor bias at additional current; shutdown additionally powers them down. RAM retention is separate. PWRKEY writes 0x4859 then 0xF27B must immediately precede PWRMOD; other writes relock. LPMODECON/CLKSEL use key 0xC59D6; sequencer 32 kHz switching supports ultra-low-power operation.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "pp. 129\u2013131"
+        }
+      ]
+    }
+  ],
+  "clocking": [
+    {
+      "description": "Sources:internal 32 kHz, internal 16/32 MHz, external 16/32 MHz crystal, external GPIO2/5(GPIO5 AD5940-only). Before selecting 32 MHz, set SYSCLKDIV=2 to keep digital clocks\u226416 MHz. ADC32 MHz adds typical 2 mA. Boot uses internal 16 MHz; division 1\u201332 is available, but system performance is validated only 16 MHz.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 132"
+        }
+      ]
+    },
+    {
+      "description": "Enable the chosen oscillator and wait ready before switching. The driver warns an unavailable selected source can require reset. LFOSC system operation slows SPI too; SCLK must remain below system clock. OSCCON requires OSCKEY=0xCB14 immediately beforehand; another-register write relocks.",
+      "source_refs": [
+        {
+          "source": "driver",
+          "location": "ad 5940.h:3461\u20133468; ad 5940.c:2379\u20132481"
+        },
+        {
+          "source": "datasheet",
+          "location": "pp. 104, 135"
+        }
+      ]
+    }
+  ],
+  "identification": [
+    {
+      "description": "ADIID is fixed 0x4144; CHIPID includes a changing silicon revision. A zero driver reset declaration does not imply a zero manufacturer ID. Preserve conflicting CHIPID revision/reset alternatives rather than assuming a silicon revision.",
+      "source_refs": [
+        {
+          "source": "datasheet",
+          "location": "p. 28, Tables 11\u201313"
+        },
+        {
+          "source": "driver",
+          "location": "ad 5940.h:AD5940_ADIID; AD5940_CHIPID"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+/* Generated from the canonical register inventory; do not edit.
+ * {{ block.title|default(block.name)|comment }} ({{ block.name|comment }}).
+ * Register addresses are byte addresses. Field reset and ENUM values are unshifted.
+ * Defined writable masks exclude read-only and reserved bits; reserved masks
+ * contain only reserved bits. Unresolved constants are omitted, never guessed.
+{% for note in block.notes|default([]) %}
+ * {{ note|comment }}
+{% endfor %}
+{% if block.description is defined %}
+ * {{ block.description|comment }}
+{% endif %}
+{% for ref in block.source_refs|default([]) %}
+ * Source {{ ref.source|comment }}: {{ ref.location|comment }}.
+{% endfor %}
+{% for source in data.sources %}
+ * Source {{ source.id|comment }}: {{ source.title|comment }}
+ * {{ source.url|comment }} (accessed {{ source.accessed|comment }}).
+{% if source.files is defined %}
+{% for filename, digest in source.files|dictsort %}
+ * {{ filename|comment }} SHA-256: {{ digest|comment }}.
+{% endfor %}
+{% endif %}
+{% if source.sha256 is defined %}
+ * SHA-256: {{ source.sha256|comment }}.
+{% endif %}
+{% if source.extraction_sha256 is defined %}
+ * Extraction SHA-256: {{ source.extraction_sha256|comment }} ({{ source.extraction_format|default('format unspecified')|comment }}).
+{% endif %}
+{% if source.extraction is defined %}
+ * Extraction: {{ source.extraction|json|comment }}.
+{% endif %}
+{% if source.extraction_identifier is defined %}
+ * Extraction identifier: {{ source.extraction_identifier|comment }}.
+{% endif %}
+{% if source.revision is defined %}
+ * Revision: {{ source.revision|comment }}.
+
+{% endif %}
+{% endfor %}
+ */
+#ifndef {{ upper_prefix }}REGISTERS_{{ block.name|upper }}_H
+#define {{ upper_prefix }}REGISTERS_{{ block.name|upper }}_H
+
+#include <stdint.h>
+{% set block_register_names = block.registers|map(attribute='name')|list %}
+{% if data.driver_settings is defined %}
+{% for group in data.driver_settings.groups if group.status != 'excluded' %}
+{% set relevant = namespace(found=false) %}
+{% for target in group.targets %}
+{% if target.register in block_register_names %}{% set relevant.found = true %}{% endif %}
+{% endfor %}
+{% if relevant.found and (group.status != 'direct' or group.notes|default([])) %}
+
+/* Driver setting family {{ group.family|comment }}: {{ group.status|comment }} mapping.
+{% for note in group.notes|default([]) %}
+ * {{ note|comment }}
+{% endfor %}
+{% for target in group.targets %}
+ * Target {{ target.register|comment }}.{{ target.field|comment }}.
+{% endfor %}
+{% if group.status != 'direct' %}
+{% for setting in group.settings %}
+ * {{ setting.name|comment }} = {{ setting.source_value|comment }} (driver API representation): {{ setting.description|comment }}{% for ref in setting.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %}
+
+{% endfor %}
+{% endif %}
+{% for evidence in group.evidence_lines|default([]) %}
+ * Mapping evidence: driver {{ evidence.file|comment }}:{{ evidence.line }}.
+{% endfor %}
+ */
+{% endif %}
+{% endfor %}
+{% endif %}
+{% for register in block.registers %}
+
+/* {{ register.name|comment }}: {{ register.description|default('')|comment }}
+ * Access: {{ register.access|default('unknown')|comment }}; storage: {{ register.storage_width }} bits; evidence: {{ register.evidence_status|default('source-limited')|comment }}.
+{% for ref in register.source_refs|default([]) %}
+ * Source {{ ref.source|comment }}: {{ ref.location|comment }}.
+{% endfor %}
+{% for conflict in data.conflicts|default([]) if conflict.register == register.name %}
+ * {{ conflict.attribute|comment }}: candidates {{ conflict.candidates|json|comment }}; {{ conflict.resolution|comment }}{% if conflict.chosen is not none %}, chosen {{ conflict.chosen|comment }}{% endif %}. {{ conflict.reason|comment }}{% for ref in conflict.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %}
+
+{% endfor %}
+{% for region in register.reserved_regions|default([]) %}
+ * Reserved [{{ region.position + region.width - 1 }}:{{ region.position }}]: {{ region.description|comment }} Reset {{ region.reset|default('unknown', true)|comment }}; access {{ region.access|default('unknown')|comment }}.{% for ref in region.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %}
+
+{% endfor %}
+{% for alias in register.legacy_aliases|default([]) %}
+ * Driver aggregate {{ alias.name|comment }} [{{ alias.position + alias.width - 1 }}:{{ alias.position }}]: {{ alias.description|comment }} Reset {{ alias.reset|default('unknown', true)|comment }}; access {{ alias.access|default('unknown')|comment }}. Retained as source evidence; detailed fields below define the public names.{% for ref in alias.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %}
+
+{% for enumeration in alias.enumerations|default([]) %}
+ * Aggregate setting {{ enumeration.name|comment }} = {{ enumeration.value|comment }} (unshifted): {{ enumeration.description|comment }}{% for ref in enumeration.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %}
+
+{% endfor %}
+{% endfor %}
+{% for note in register.notes|default([]) %}
+{% set emitted = namespace(conflict=false) %}
+{% for conflict in data.conflicts|default([]) if conflict.register == register.name %}
+{% if note == conflict.attribute ~ ': ' ~ conflict.reason %}{% set emitted.conflict = true %}{% endif %}
+{% endfor %}
+{% if not emitted.conflict %}
+ * {{ note|comment }}
+{% endif %}
+{% endfor %}
+{% for conflict in register.conflicts|default([]) %}
+ * Conflict: {{ conflict|comment }}
+{% endfor %}
+ */
+{% for key, suffix in [('address', 'REG_ADDR'), ('reset', 'REG_RESET_VALUE'), ('writable_mask', 'WRITABLE_MASK'), ('reserved_mask', 'RESERVED_MASK')] %}
+{% if register[key] is not none %}
+#define {{ upper_prefix }}{{ register.name }}_{{ suffix }} {{ register[key]|hex32 }}
+{% else %}
+/* {{ upper_prefix }}{{ register.name }}_{{ suffix }} intentionally absent: unresolved or unclassified; see evidence above. */
+{% endif %}
+{% endfor %}
+{% for field in register.fields %}
+
+/* {{ register.name|comment }}.{{ field.name|comment }} {% if not field.range_resolved %}(range unresolved; retained driver {% endif %}[{{ field.position + field.width - 1 }}:{{ field.position }}]{% if not field.range_resolved %}){% endif %}: {{ field.description|default('')|comment }}
+ * Access: {{ field.access|default('unknown')|comment }}; evidence: {{ field.evidence_status|default('source-limited')|comment }}.{% if field.reset is none %} Reset unresolved; RESET_VALUE intentionally absent.{% endif %}{% if field.reserved %} Reserved; no field macros.{% endif %}
+
+{% if field.driver_name is defined and field.driver_name != field.name %}
+ * Driver field name: {{ field.driver_name|comment }}.
+{% endif %}
+{% for ref in field.source_refs|default([]) %}
+ * Source {{ ref.source|comment }}: {{ ref.location|comment }}.
+{% endfor %}
+{% for note in field.notes|default([]) %}
+ * {{ note|comment }}
+{% endfor %}
+{% for conflict in field.conflicts|default([]) %}
+ * Conflict: {{ conflict|comment }}
+{% endfor %}
+ */
+{% if not field.reserved %}
+{% if field.range_resolved %}
+#define {{ upper_prefix }}{{ register.name }}_{{ field.name }}_POSITION {{ field.position }}U
+#define {{ upper_prefix }}{{ register.name }}_{{ field.name }}_WIDTH {{ field.width }}U
+#define {{ upper_prefix }}{{ register.name }}_{{ field.name }}_MASK {{ field.mask|hex32 }}
+{% else %}
+/* POSITION, WIDTH and MASK intentionally absent: unresolved field range {{ field.range_conflict|comment }}. */
+{% endif %}
+{% if field.reset is not none %}
+#define {{ upper_prefix }}{{ register.name }}_{{ field.name }}_RESET_VALUE {{ field.reset|hex32 }}
+{% endif %}
+{% for enumeration in field.enumerations %}
+#define {{ upper_prefix }}{{ register.name }}_{{ field.name }}_ENUM_{{ enumeration.name }} {{ enumeration.value|hex32 }} /* {{ enumeration.description|default('')|comment }}{% if enumeration.driver_name is defined and enumeration.driver_name != enumeration.name %} (driver setting {{ enumeration.driver_name|comment }}){% endif %}{% for ref in enumeration.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %} */
+{% for alternative in enumeration.source_alternatives|default([]) %}
+/* Driver {{ alternative.name|comment }}{% if alternative.description|lower|trim('.')|trim != enumeration.description|default('')|lower|trim('.')|trim %}: {{ alternative.description|comment }}{% endif %}{% for ref in alternative.source_refs|default([]) %} [{{ ref.source|comment }}: {{ ref.location|comment }}]{% endfor %} */
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+#endif /* {{ upper_prefix }}REGISTERS_{{ block.name|upper }}_H */

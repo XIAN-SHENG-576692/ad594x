@@ -1,0 +1,7 @@
+/* Generated umbrella header. Functional block headers can be included separately. */
+#ifndef {{ upper_prefix }}REGISTERS_H
+#define {{ upper_prefix }}REGISTERS_H
+{% for block in data.blocks %}
+#include "{{ lower_prefix }}registers_{{ block.slug }}.h"
+{% endfor %}
+#endif /* {{ upper_prefix }}REGISTERS_H */

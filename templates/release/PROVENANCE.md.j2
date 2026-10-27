@@ -1,0 +1,51 @@
+# Register inventory provenance
+
+This release is independently generated register metadata, not a driver or an
+implementation derived from the official driver. The original source files are
+not bundled. Register and field comments paraphrase the hardware meaning and
+retain source locations, qualifications, and recorded disagreements.
+
+{% for source in data.sources %}
+- **{{ source.id }} — {{ source.title }}**: {{ source.url }}. Accessed {{ source.accessed }}.
+{% if source.files is defined %}
+{% for filename, digest in source.files|dictsort %}
+  - {{ filename }} SHA-256: `{{ digest }}`.
+{% endfor %}
+{% endif %}
+{% if source.sha256 is defined %}
+  - SHA-256: `{{ source.sha256 }}`.
+{% endif %}
+{% if source.revision is defined %}
+  - Revision: {{ source.revision }}.
+{% endif %}
+{% if source.extraction_sha256 is defined %}
+  - Extraction SHA-256: `{{ source.extraction_sha256 }}` ({{ source.extraction_format|default('format unspecified') }}).
+{% endif %}
+{% if source.extraction is defined %}
+  - Extraction: {{ source.extraction|json }}.
+{% endif %}
+{% if source.extraction_identifier is defined %}
+  - Extraction identifier: {{ source.extraction_identifier }}.
+{% endif %}
+{% endfor %}
+
+The complete canonical inventory and per-entry source references are in
+`data/registers.json`. Definitions with source-limited evidence retain their
+evidence/access qualifications. Writable and reserved masks are separate;
+read-only bits are not classified as reserved. The inventory records source
+disagreement decisions and unresolved scope limitations explicitly.
+
+{% for conflict in data.conflicts|default([]) %}
+- {{ conflict|json }}
+{% endfor %}
+
+Coverage summary:
+
+```json
+{{ data.coverage|default({})|json }}
+```
+
+The legacy spelling `AD594X_AFECON_ADIID_RESET_VALUE` combines a functional
+block and register. The strict namespace uses `AD594X_ADIID_REG_RESET_VALUE`
+and `AD594X_ADIID_ADIID_RESET_VALUE`, both `UINT32_C(0x00004144)`.
+No block-name alias is emitted.

@@ -1,0 +1,21 @@
+/* Compile-only register metadata example; no device or transport access. */
+#include "{{ lower_prefix }}registers.h"
+
+{% for block in data.blocks %}
+{% for register in block.registers %}
+{% if register.name == 'ADIID' %}
+_Static_assert({{ upper_prefix }}ADIID_REG_ADDR == UINT32_C(0x00000400), "ADIID address");
+_Static_assert({{ upper_prefix }}ADIID_REG_RESET_VALUE == UINT32_C(0x00004144), "ADIID reset");
+{% for field in register.fields %}
+{% if field.name == 'ADIID' %}
+_Static_assert({{ upper_prefix }}ADIID_ADIID_RESET_VALUE == UINT32_C(0x00004144), "ADIID field reset");
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+int main(void)
+{
+    return 0;
+}

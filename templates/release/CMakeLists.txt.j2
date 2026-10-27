@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.16)
+project({{ lower_prefix }}registers LANGUAGES C)
+add_library({{ lower_prefix }}registers INTERFACE)
+target_include_directories({{ lower_prefix }}registers INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features({{ lower_prefix }}registers INTERFACE c_std_11)
+add_executable({{ lower_prefix }}registers_example examples/{{ lower_prefix }}registers_example.c)
+target_link_libraries({{ lower_prefix }}registers_example PRIVATE {{ lower_prefix }}registers)
+install(DIRECTORY include/ DESTINATION include)
+install(TARGETS {{ lower_prefix }}registers EXPORT {{ lower_prefix }}registers_targets)
+install(EXPORT {{ lower_prefix }}registers_targets DESTINATION lib/cmake/{{ lower_prefix }}registers)
+
+enable_testing()
+add_executable({{ lower_prefix }}registers_assertions tests/{{ lower_prefix }}registers_assertions.c)
+target_link_libraries({{ lower_prefix }}registers_assertions PRIVATE {{ lower_prefix }}registers)
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options({{ lower_prefix }}registers_assertions PRIVATE -Wall -Wextra -Werror -pedantic)
+endif()
+add_test(NAME {{ lower_prefix }}registers_assertions COMMAND {{ lower_prefix }}registers_assertions)
