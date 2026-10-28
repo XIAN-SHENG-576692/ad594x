@@ -11,9 +11,9 @@
 | `generated/` | Ignored headers, examples, builds, manifests and releases |
 | `scripts/` | Bootstrap, import, generation, prefix rendering and verification |
 
-Every project-authored `.c`, `.h` and future `.acsl` file is rendered from Jinja2
-only into `generated/`. Future `templates/{spec,src,tests}/` directories remain
-available; no driver implementation or third-party C framework is present.
+Render all project `.c`, `.h` and future `.acsl` files from Jinja2 into
+`generated/` only. `templates/{spec,src,tests}/` are reserved for future work;
+no driver implementation or third-party C framework is present.
 
 ## Setup
 
@@ -25,18 +25,18 @@ sudo apt-get install -y python3 python3-venv python3-pip build-essential cmake
 bash scripts/init-dev-ubuntu.sh
 ```
 
-On another host with Python 3 and a C11 compiler, create a virtual environment
-directly; the Ubuntu bootstrap intentionally checks the operating system:
+Other hosts need Python 3, a C11 compiler and CMake; bootstrap checks for Ubuntu.
+Create the environment directly:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
 ```
 
-Jinja2 3.1 is required. Evidence updates use the permitted driver files and
-indexed PDF text described in [register evidence](register-evidence.md); the
-importer does not read binary PDFs. Rendering and release consumption do not
-need reference downloads. No system Python packages are changed.
+Requires Jinja2 `>=3.1,<4`; system Python packages stay unchanged.
+Evidence updates use permitted driver files and indexed PDF text
+([sources](register-evidence.md)); the importer cannot read binary PDFs.
+Rendering and release use need no reference downloads.
 
 ## Generate, verify and build
 
@@ -51,9 +51,9 @@ cmake --build generated/build
 ctest --test-dir generated/build --output-on-failure
 ```
 
-The retained `check-scaffold.sh` name is a compatibility entry point for repository
-structure/dependency checks. Verification covers actual generated artifacts;
-see [verification](verification.md) for evidence and limits.
+`check-scaffold.sh` checks structure/dependencies; its name is retained for
+compatibility. See [verification](verification.md) for generated-artifact
+checks and evidence limits.
 
 Choose a custom prefix or explicitly empty prefix:
 
@@ -62,24 +62,28 @@ Choose a custom prefix or explicitly empty prefix:
 .venv/bin/python scripts/generate_registers.py --prefix '' --output generated/unprefixed
 ```
 
-Prefixes must be empty or portable lower snake case starting with a letter.
-Keywords, invalid spellings, reserved names and final namespace collisions fail.
-Names are never silently normalized. The generator validates before replacing
-its output tree, which must be under the repository's ignored `generated/`.
+Prefixes: empty or portable lower snake case starting with a letter. Keywords,
+invalid/reserved names and final namespace collisions fail without normalization.
+Validation precedes output replacement; output must stay under ignored `generated/`.
 
 ## Release packages
 
-`--releases` creates two independent packages and deterministic `.tar.gz`
-archives under `generated/releases/`:
+`--releases` creates independent packages and deterministic `.tar.gz` archives
+under `generated/releases/`:
 
 - `ad594x-registers`: complete concrete headers, example and CMake integration.
-- `ad594x-registers-prefix-template`: all metadata loops expanded; only the
-  prefix remains substitutable, with a standalone `scripts/render.py`.
+- `ad594x-registers-prefix-template`: expanded metadata loops, substitutable
+  prefix and standalone `scripts/render.py`.
 
-Both include `data/registers.json`, `PROVENANCE.md`, usage documentation and a
-SHA-256 file manifest. The concrete package requires only a C11 toolchain.
-The prefix package requires Python/Jinja2 to render, then the same C11 toolchain.
-Release builds and prefix rendering work after extraction outside this checkout.
+Both include `data/registers.json`, `PROVENANCE.md`, usage docs and a SHA-256
+file manifest. Both build outside this checkout with a C11 toolchain;
+the prefix package first needs Python/Jinja2 to render.
+
+CI uploads both archives as `register-release-packages` after validation.
+Only `v*` tag pushes (e.g. `v1.0.0`) also publish a GitHub Release with those
+verified archives and generated notes. Only the publishing job gets
+`contents: write`, using the built-in token. Branch/PR/manual runs upload
+artifacts only.
 
 ```sh
 .venv/bin/python generated/releases/ad594x-registers-prefix-template/scripts/render.py --prefix sensor --output generated/release-sensor
@@ -88,7 +92,6 @@ cmake --build generated/release-sensor-build
 ctest --test-dir generated/release-sensor-build --output-on-failure
 ```
 
-The header comments and inventory are the authority for source limitations and
-deliberately omitted uncertain constants. Review templates together with rendered
-verification results; never commit generated output. Transport/runtime/formal
-gates remain future work as described in [the roadmap](roadmap.md).
+Header comments and inventory define source limits and omitted uncertain constants.
+Review templates with rendered verification results; never commit generated output.
+Transport/runtime/formal gates remain [future work](roadmap.md).
